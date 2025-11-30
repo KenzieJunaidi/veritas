@@ -23,7 +23,7 @@ def login_dashboard():
 
             if ok:
                 st.success(msg)
-                time.sleep(2)
+                time.sleep(1)
                 st.switch_page("pages/Home.py")
             
             else:

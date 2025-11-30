@@ -1,0 +1,17 @@
+{
+  "classes": [
+    "Kenzie",
+    "Rayvel",
+    "Valentino"
+  ],
+  "label_to_idx": {
+    "Kenzie": 0,
+    "Rayvel": 1,
+    "Valentino": 2
+  },
+  "idx_to_label": {
+    "0": "Kenzie",
+    "1": "Rayvel",
+    "2": "Valentino"
+  }
+}
