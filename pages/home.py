@@ -9,6 +9,26 @@ from PIL import Image
 
 st.set_page_config(page_title="Veritas | Home", layout="wide")
 
+# ========================================================
+# CSS INJECTION TO SET A CUSTOM MAXIMUM WIDTH
+# ========================================================
+st.markdown(
+    """
+    <style>
+    /* 1. Set Custom Max-Width for the main content area (The Intermediate Width) */
+    div.block-container {
+        max-width: 1300px; /* Adjust this value (e.g., 1000px - 1400px) */
+    }
+
+    /* 2. Reduce the gap between the columns (Camera Feed and Stats Panel) */
+    div[data-testid="stHorizontalBlock"] {
+        gap: 0.5rem; /* Adjust this value (0.5rem for small, 1rem for moderate) */
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
 # ===========================
 # LOGIN CHECK
 # ===========================
@@ -29,7 +49,7 @@ if "start_time" not in st.session_state:
 if "local_log" not in st.session_state:
     st.session_state.local_log = []
 
-DETECTION_DURATION = 3.0  # seconds to confirm attendance
+DETECTION_DURATION = 1.5  # seconds to confirm attendance
 
 # ===========================
 # TOP RIGHT LOGOUT BUTTON
@@ -46,6 +66,10 @@ with top_right:
 # MAIN LAYOUT – CAMERA & STATS
 # ===========================
 col1, col2 = st.columns([2, 1])
+
+# Placeholder for the success notification
+SUCCESS_MESSAGE_PLACEHOLDER = st.empty()
+
 
 # ===========================
 # CAMERA PANEL
@@ -81,7 +105,6 @@ with col2:
 
 # ===============================================
 # FULL-WIDTH ATTENDANCE LOG (MOVED TO HERE)
-# Logic is now outside the camera loop so it loads
 # ===============================================
 st.markdown("---")
 st.markdown("## Attendance Log (Latest 20 Records)")
@@ -101,11 +124,28 @@ def update_log_display(placeholder, local_logs):
         db_logs = []
 
     # Combine local and DB logs (local_log is already in reverse order for newest first)
+    # NOTE: local_logs is passed as st.session_state.local_log[::-1] (reversed)
     combined_logs = local_logs + db_logs
     
-    # Format and display the top 20 logs
+    # ----------------------------------------------------
+    # FIX: Deduplicate entries before display
+    # ----------------------------------------------------
+    seen_keys = set()
+    unique_logs = []
+    
+    # Iterate through the combined logs, keeping the first instance found
+    # This naturally prioritizes the local log if it appears first
+    for entry in combined_logs:
+        # Use a tuple of the identifying fields as a unique key
+        key = (entry.get("timestamp"), entry.get("person_detected"))
+        if key not in seen_keys:
+            seen_keys.add(key)
+            unique_logs.append(entry)
+    # ----------------------------------------------------
+    
+    # Format and display the top 20 unique logs
     log_lines = []
-    for entry in combined_logs[:20]:
+    for entry in unique_logs[:20]:
         ts = entry.get("timestamp")
         pname = entry.get("person_detected")
         log_lines.append(f"**{ts}** — {pname}")
@@ -153,13 +193,15 @@ while cap.isOpened():
                         "timestamp": timestamp,
                         "person_detected": name
                     }).execute()
-                    st.success(f"Attendance recorded for **{name}**")
+                    
+                    # Display the success message in the placeholder
+                    SUCCESS_MESSAGE_PLACEHOLDER.success(f"Attendance recorded for **{name}**")
                     
                     # 3. Update the displayed log immediately after success
                     update_log_display(log_placeholder, local_logs_for_display)
 
                 except Exception as e:
-                    st.error(f"Failed to log attendance: {e}")
+                    SUCCESS_MESSAGE_PLACEHOLDER.error(f"Failed to log attendance: {e}")
 
                 # Prevent immediate re-log for the same person
                 st.session_state.start_time = time.time() + 9999
