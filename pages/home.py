@@ -6,40 +6,37 @@ import time
 import numpy as np
 from utils.model import detect_face_and_predict
 from PIL import Image
+import pytz
 
 st.set_page_config(page_title="Veritas | Home", layout="wide")
 
-# ========================================================
-# CSS INJECTION TO SET A CUSTOM MAXIMUM WIDTH
-# ========================================================
+# CSS Injection (Fix Gap between Coloumns)
 st.markdown(
     """
     <style>
-    /* 1. Set Custom Max-Width for the main content area (The Intermediate Width) */
     div.block-container {
-        max-width: 1300px; /* Adjust this value (e.g., 1000px - 1400px) */
+        max-width: 1300px;
     }
 
-    /* 2. Reduce the gap between the columns (Camera Feed and Stats Panel) */
     div[data-testid="stHorizontalBlock"] {
-        gap: 0.5rem; /* Adjust this value (0.5rem for small, 1rem for moderate) */
+        gap: 0.5rem;
+    }
+    /* Custom style to make the clock metric stand out a bit */
+    [data-testid="stMetricValue"] {
+        font-size: 2rem; /* Larger font for time */
     }
     </style>
     """,
     unsafe_allow_html=True
 )
 
-# ===========================
-# LOGIN CHECK
-# ===========================
+# Login Check
 user = st.session_state.get("user")
 if not user:
-    st.warning("You must be logged in to use the Home page. Please login on the main page.")
+    st.warning("You must be logged in to use the Home page. Please login first.")
     st.stop()
 
-# ===========================
-# SESSION STATE
-# ===========================
+# Session State
 if "current_name" not in st.session_state:
     st.session_state.current_name = None
 
@@ -49,11 +46,9 @@ if "start_time" not in st.session_state:
 if "local_log" not in st.session_state:
     st.session_state.local_log = []
 
-DETECTION_DURATION = 1.5  # seconds to confirm attendance
+DETECTION_DURATION = 1.5  # Time needed to Confirm Attendance
 
-# ===========================
-# TOP RIGHT LOGOUT BUTTON
-# ===========================
+# Logout Button
 top_left, top_right = st.columns([8, 1])
 
 with top_right:
@@ -62,18 +57,12 @@ with top_right:
         logout()
         st.rerun()
 
-# ===========================
-# MAIN LAYOUT – CAMERA & STATS
-# ===========================
+# Main Layout
 col1, col2 = st.columns([2, 1])
 
-# Placeholder for the success notification
 SUCCESS_MESSAGE_PLACEHOLDER = st.empty()
 
-
-# ===========================
-# CAMERA PANEL
-# ===========================
+# Camera Div
 with col1:
     st.markdown("## Live Camera Feed")
     FRAME_WINDOW = st.image([])
@@ -86,13 +75,13 @@ with col1:
     else:
         camera_status = "🔴 Failed to Load"
 
-# ===========================
-# STATS PANEL
-# ===========================
+# Status Div
 with col2:
     st.markdown("## System Status (Demo)")
 
-    # decorative stats
+    # 1. Clock Placeholder - Added here
+    CLOCK_PLACEHOLDER = st.empty() 
+
     class_name = "A0707"
     model_status = "🧠 Model Loaded"
     connection_status = camera_status
@@ -103,13 +92,11 @@ with col2:
     st.metric("Model Status", model_status)
     st.metric("FPS", demo_fps)
 
-# ===============================================
-# FULL-WIDTH ATTENDANCE LOG (MOVED TO HERE)
-# ===============================================
+# Attendance Log
 st.markdown("---")
 st.markdown("## Attendance Log (Latest 20 Records)")
 
-# Create a placeholder to dynamically update the log inside the loop
+# Log Placeholder (Local)
 log_placeholder = st.empty()
 
 def update_log_display(placeholder, local_logs):
@@ -123,27 +110,21 @@ def update_log_display(placeholder, local_logs):
     except Exception:
         db_logs = []
 
-    # Combine local and DB logs (local_log is already in reverse order for newest first)
-    # NOTE: local_logs is passed as st.session_state.local_log[::-1] (reversed)
-    combined_logs = local_logs + db_logs
+    # Combining Database with Local Log
+    # Using local_logs[::-1] ensures local logs are also newest-first for merging
+    combined_logs = local_logs[::-1] + db_logs
     
-    # ----------------------------------------------------
-    # FIX: Deduplicate entries before display
-    # ----------------------------------------------------
+    # Display Unique Logs
     seen_keys = set()
     unique_logs = []
     
-    # Iterate through the combined logs, keeping the first instance found
-    # This naturally prioritizes the local log if it appears first
     for entry in combined_logs:
-        # Use a tuple of the identifying fields as a unique key
         key = (entry.get("timestamp"), entry.get("person_detected"))
         if key not in seen_keys:
             seen_keys.add(key)
             unique_logs.append(entry)
-    # ----------------------------------------------------
     
-    # Format and display the top 20 unique logs
+    # Format & Display (Top 20 Newest Attendance Log)
     log_lines = []
     for entry in unique_logs[:20]:
         ts = entry.get("timestamp")
@@ -152,23 +133,26 @@ def update_log_display(placeholder, local_logs):
 
     placeholder.markdown("  \n".join(log_lines))
 
-# Initial log load
-update_log_display(log_placeholder, st.session_state.local_log[::-1])
+update_log_display(log_placeholder, st.session_state.local_log)
 
 
-# ===========================
-# CAMERA LOOP (RUNS AFTER UI)
-# ===========================
+# Live Camera Feed
 while cap.isOpened():
+    # 2. Update Clock
+    current_time = datetime.now().strftime("%H:%M:%S")
+    current_date = datetime.now().strftime("%Y/%m/%d")
+    # Use the placeholder to update the clock metric on every loop
+    CLOCK_PLACEHOLDER.metric("Current Time", current_time, label_visibility="visible", help=current_date)
+
+
     ret, frame_bgr = cap.read()
     if not ret:
         st.error("Camera failed to load")
         break
 
-    # ---- Inference ----
     name, frame_bgr = detect_face_and_predict(frame_bgr)
 
-    # ---- Attendance timer logic ----
+    # Attendance Timer Logic
     if name is not None:
         if st.session_state.current_name != name:
             st.session_state.current_name = name
@@ -176,34 +160,31 @@ while cap.isOpened():
         else:
             elapsed = time.time() - st.session_state.start_time
             if elapsed >= DETECTION_DURATION:
-                timestamp = datetime.utcnow().strftime("[%Y-%m-%d] %H:%M:%S")
+                wib_tz = pytz.timezone('Asia/Jakarta')
+                timestamp = datetime.now(wib_tz).strftime("[%Y-%m-%d] %H:%M:%S")
 
-                # 1. Update local log
+                # Update Local Log
                 st.session_state.local_log.append({
                     "timestamp": timestamp,
                     "person_detected": name
                 })
                 
-                # Reverse local log for display order (newest first)
-                local_logs_for_display = st.session_state.local_log[::-1]
-
-                # 2. Log to Supabase
+                # Update Database Log
                 try:
                     supabase.table("attendance_log").insert({
                         "timestamp": timestamp,
                         "person_detected": name
                     }).execute()
                     
-                    # Display the success message in the placeholder
                     SUCCESS_MESSAGE_PLACEHOLDER.success(f"Attendance recorded for **{name}**")
                     
-                    # 3. Update the displayed log immediately after success
-                    update_log_display(log_placeholder, local_logs_for_display)
+                    # Update log display (local_log is already up-to-date)
+                    update_log_display(log_placeholder, st.session_state.local_log)
 
                 except Exception as e:
                     SUCCESS_MESSAGE_PLACEHOLDER.error(f"Failed to log attendance: {e}")
-
-                # Prevent immediate re-log for the same person
+                
+                # Prevent Repeated Logging
                 st.session_state.start_time = time.time() + 9999
     else:
         st.session_state.current_name = None

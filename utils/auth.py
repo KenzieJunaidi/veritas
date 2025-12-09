@@ -6,7 +6,7 @@ def signup(email: str, password: str) -> tuple[bool, str]:
 
         res = supabase.auth.sign_up({"email": email, "password": password})
         # sign_up returns a dict; if confirmation needed, user is in res
-        return True, "Check your email for confirmation (if enabled)."
+        return True, "Check your email for confirmation link."
     
     except Exception as e:
         return False, str(e)

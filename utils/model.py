@@ -4,10 +4,7 @@ import numpy as np
 import cv2
 import time
 
-# ===========================
-# LOAD MODEL & LABELS
-# ===========================
-
+# Loading Model and Label
 IMG_SIZE = 224
 
 with open("labels.json", "r") as f:
@@ -22,10 +19,7 @@ face_cascade = cv2.CascadeClassifier(
     cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
 )
 
-# ===========================
-# PREDICTION FUNCTION
-# ===========================
-
+# Prediction Function
 def predict_rgb_face(face_rgb):
     face_rgb_resized = cv2.resize(face_rgb, (IMG_SIZE, IMG_SIZE))
     face_rgb_resized = np.expand_dims(face_rgb_resized, axis=0)
@@ -36,16 +30,8 @@ def predict_rgb_face(face_rgb):
 
     return LABELS[idx], float(probs[idx])
 
-
-# ===========================
-# FACE DETECTION + MODEL
-# ===========================
-
+# Face Detection
 def detect_face_and_predict(frame_bgr):
-    """
-    Input: Raw webcam frame (BGR)
-    Output: (detected_name or None, frame_with_boxes)
-    """
     gray = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2GRAY)
     faces = face_cascade.detectMultiScale(gray, 1.3, 5)
 
@@ -56,9 +42,9 @@ def detect_face_and_predict(frame_bgr):
         face_rgb = cv2.cvtColor(face_bgr, cv2.COLOR_BGR2RGB)
 
         name, conf = predict_rgb_face(face_rgb)
-        detected_name = name  # Only track the last detected person
+        detected_name = name
 
-        # Draw box + label
+        # Draw Box + Label
         cv2.rectangle(frame_bgr, (x, y), (x+w, y+h), (0, 255, 0), 2)
         cv2.putText(frame_bgr, f"{name} ({conf:.2f})",
                     (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX,

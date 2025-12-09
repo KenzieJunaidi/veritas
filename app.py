@@ -2,6 +2,7 @@ import time
 import streamlit as st
 from utils.auth import login, signup
 
+# Login / Register Page Layout
 def login_dashboard():
     st.set_page_config(page_title="Veritas")
 
