@@ -18,7 +18,7 @@ if not user:
 if st.button("Logout"):
     from utils.auth import logout
     logout()
-    st.switch_page("app.py")
+    st.switch_page("app")
 
 st.title("Veritas – Attendance")
 
