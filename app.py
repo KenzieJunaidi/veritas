@@ -32,7 +32,7 @@ def login_dashboard():
                 st.success(msg)
                 st.session_state.logged_in = True
                 time.sleep(1)
-                st.switch_page("Home")
+                st.switch_page("pages/home.py")
             else:
                 st.error(msg)
 
