@@ -1,53 +1,106 @@
 import json
+import os
 import tensorflow as tf
 import numpy as np
 import cv2
-import time
+import streamlit as st
+import gdown
 
-# Loading Model and Label
+# ---------------------------
+# CONFIG
+# ---------------------------
 IMG_SIZE = 224
+MODEL_PATH = "vgg_FT_best.keras"
+LABELS_PATH = "labels.json"
 
-with open("labels.json", "r") as f:
-    meta = json.load(f)
+# Disable GPU (Streamlit Cloud safety)
+tf.config.set_visible_devices([], "GPU")
 
-LABELS = meta["classes"]
 
-model = tf.keras.models.load_model("vgg_FT_best.keras")
+# ---------------------------
+# LOAD MODEL & LABELS (CACHED) // CHANGE TO G-DRIVE
+# ---------------------------
+MODEL_URL = f"https://drive.google.com/file/d/1Ad5C1Wc2OsLwWbnSEjH3XW8XLaff7f4o/view?usp=sharing"
 
-# Haar Cascade
-face_cascade = cv2.CascadeClassifier(
-    cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
-)
+@st.cache_resource
+def load_model_and_labels():
+    # Download model if not exists
+    if not os.path.exists(MODEL_PATH):
+        with st.spinner("Downloading AI model..."):
+            gdown.download(MODEL_URL, MODEL_PATH, quiet=False)
 
-# Prediction Function
+    # Labels should still be in repo
+    if not os.path.exists(LABELS_PATH):
+        raise FileNotFoundError(f"Labels file not found: {LABELS_PATH}")
+
+    with open(LABELS_PATH, "r") as f:
+        meta = json.load(f)
+
+    model = tf.keras.models.load_model(MODEL_PATH)
+    labels = meta["classes"]
+
+    return model, labels
+
+# ---------------------------
+# FACE DETECTOR
+# ---------------------------
+@st.cache_resource
+def load_face_cascade():
+    cascade = cv2.CascadeClassifier(
+        cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
+    )
+    if cascade.empty():
+        raise RuntimeError("Failed to load Haar cascade")
+    return cascade
+
+
+FACE_CASCADE = load_face_cascade()
+
+
+# ---------------------------
+# PREDICTION
+# ---------------------------
 def predict_rgb_face(face_rgb):
-    face_rgb_resized = cv2.resize(face_rgb, (IMG_SIZE, IMG_SIZE))
-    face_rgb_resized = np.expand_dims(face_rgb_resized, axis=0)
-    face_rgb_resized = tf.keras.applications.vgg16.preprocess_input(face_rgb_resized)
+    face_resized = cv2.resize(face_rgb, (IMG_SIZE, IMG_SIZE))
+    face_resized = np.expand_dims(face_resized, axis=0)
+    face_resized = tf.keras.applications.vgg16.preprocess_input(face_resized)
 
-    probs = model.predict(face_rgb_resized, verbose=0)[0]
+    probs = MODEL.predict(face_resized, verbose=0)[0]
     idx = int(np.argmax(probs))
 
     return LABELS[idx], float(probs[idx])
 
-# Face Detection
+
+# ---------------------------
+# FACE DETECTION + ANNOTATION
+# ---------------------------
 def detect_face_and_predict(frame_bgr):
     gray = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2GRAY)
-    faces = face_cascade.detectMultiScale(gray, 1.3, 5)
+    faces = FACE_CASCADE.detectMultiScale(gray, scaleFactor=1.3, minNeighbors=5)
 
-    detected_name = None
+    best_name = None
+    best_conf = 0.0
 
     for (x, y, w, h) in faces:
-        face_bgr = frame_bgr[y:y+h, x:x+w]
+        face_bgr = frame_bgr[y:y + h, x:x + w]
         face_rgb = cv2.cvtColor(face_bgr, cv2.COLOR_BGR2RGB)
 
         name, conf = predict_rgb_face(face_rgb)
-        detected_name = name
 
-        # Draw Box + Label
-        cv2.rectangle(frame_bgr, (x, y), (x+w, y+h), (0, 255, 0), 2)
-        cv2.putText(frame_bgr, f"{name} ({conf:.2f})",
-                    (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX,
-                    0.7, (0, 255, 0), 2)
+        if conf > best_conf:
+            best_conf = conf
+            best_name = name
 
-    return detected_name, frame_bgr
+        # Draw box
+        cv2.rectangle(frame_bgr, (x, y), (x + w, y + h), (0, 255, 0), 2)
+        cv2.putText(
+            frame_bgr,
+            f"{name} ({conf:.2f})",
+            (x, y - 10),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.6,
+            (0, 255, 0),
+            2,
+        )
+
+    return best_name, frame_bgr

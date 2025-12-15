@@ -2,13 +2,19 @@ import time
 import streamlit as st
 from utils.auth import login, signup
 
-# Login / Register Page Layout
+# MUST be first Streamlit command
+st.set_page_config(
+    page_title="Veritas",
+    page_icon="🔐",
+    layout="centered"
+)
+
+# Initialize session state
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
+
+
 def login_dashboard():
-    st.set_page_config(page_title="Veritas")
-
-    if "initialized" not in st.session_state:
-        st.session_state.initialized = True
-
     st.title("Veritas")
     st.write("Secure, Touchless Attendance powered by AI Face Recognition.")
 
@@ -16,17 +22,17 @@ def login_dashboard():
 
     with tab1:
         st.header("Login")
-        email = st.text_input("Email", key="login_email")
-        password = st.text_input("Password", type="password", key="login_password")
+        email = st.text_input("Email")
+        password = st.text_input("Password", type="password")
 
         if st.button("Login"):
             ok, msg = login(email, password)
 
             if ok:
                 st.success(msg)
+                st.session_state.logged_in = True
                 time.sleep(1)
                 st.switch_page("pages/Home.py")
-            
             else:
                 st.error(msg)
 
@@ -43,8 +49,6 @@ def login_dashboard():
             else:
                 st.error(msg)
 
-home_page = st.Page(login_dashboard, title="Login", icon=":material/key:")
-report_page = st.Page("pages/Home.py", title="Home", icon=":material/home:")
 
-selected_page = st.navigation([home_page, report_page])
-selected_page.run()
+# Run app
+login_dashboard()
