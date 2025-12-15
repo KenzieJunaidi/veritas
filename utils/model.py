@@ -13,33 +13,41 @@ IMG_SIZE = 224
 MODEL_PATH = "vgg_FT_best.keras"
 LABELS_PATH = "labels.json"
 
-# Disable GPU (Streamlit Cloud safety)
-tf.config.set_visible_devices([], "GPU")
+# Disable GPU safely (Streamlit Cloud)
+try:
+    tf.config.set_visible_devices([], "GPU")
+except Exception:
+    pass
 
 
 # ---------------------------
-# LOAD MODEL & LABELS (CACHED) // CHANGE TO G-DRIVE
+# LOAD MODEL & LABELS (G-DRIVE + CACHED)
 # ---------------------------
-MODEL_URL = f"https://drive.google.com/file/d/1Ad5C1Wc2OsLwWbnSEjH3XW8XLaff7f4o/view?usp=sharing"
+
+MODEL_FILE_ID = "1Ad5C1Wc2OsLwWbnSEjH3XW8XLaff7f4o"
+MODEL_URL = f"https://drive.google.com/uc?id={MODEL_FILE_ID}"
 
 @st.cache_resource
 def load_model_and_labels():
-    # Download model if not exists
+    # Download model if missing
     if not os.path.exists(MODEL_PATH):
-        with st.spinner("Downloading AI model..."):
+        with st.spinner("Downloading AI model (first run only)..."):
             gdown.download(MODEL_URL, MODEL_PATH, quiet=False)
 
-    # Labels should still be in repo
     if not os.path.exists(LABELS_PATH):
         raise FileNotFoundError(f"Labels file not found: {LABELS_PATH}")
 
     with open(LABELS_PATH, "r") as f:
-        meta = json.load(f)
+        labels = json.load(f)["classes"]
 
     model = tf.keras.models.load_model(MODEL_PATH)
-    labels = meta["classes"]
 
     return model, labels
+
+
+# 🔑 LOAD ONCE (CACHED)
+MODEL, LABELS = load_model_and_labels()
+
 
 # ---------------------------
 # FACE DETECTOR
@@ -91,7 +99,6 @@ def detect_face_and_predict(frame_bgr):
             best_conf = conf
             best_name = name
 
-        # Draw box
         cv2.rectangle(frame_bgr, (x, y), (x + w, y + h), (0, 255, 0), 2)
         cv2.putText(
             frame_bgr,

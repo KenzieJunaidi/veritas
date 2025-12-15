@@ -2,6 +2,8 @@ import streamlit as st
 from supabase_client import supabase
 from datetime import datetime
 from utils.model import detect_face_and_predict
+st.success("Model import OK")
+
 from PIL import Image
 import numpy as np
 import pytz
