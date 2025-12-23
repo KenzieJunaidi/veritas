@@ -6,30 +6,22 @@ import cv2
 import streamlit as st
 import gdown
 
-# ---------------------------
-# CONFIG
-# ---------------------------
+# Config
 IMG_SIZE = 224
 MODEL_PATH = "vgg_FT_best.keras"
 LABELS_PATH = "labels.json"
 
-# Disable GPU safely (Streamlit Cloud)
 try:
     tf.config.set_visible_devices([], "GPU")
 except Exception:
     pass
 
-
-# ---------------------------
-# LOAD MODEL & LABELS (G-DRIVE + CACHED)
-# ---------------------------
-
+# Loading Model (Google Drive)
 MODEL_FILE_ID = "1Ad5C1Wc2OsLwWbnSEjH3XW8XLaff7f4o"
 MODEL_URL = f"https://drive.google.com/uc?id={MODEL_FILE_ID}"
 
 @st.cache_resource
 def load_model_and_labels():
-    # Download model if missing
     if not os.path.exists(MODEL_PATH):
         with st.spinner("Downloading AI model (first run only)..."):
             gdown.download(MODEL_URL, MODEL_PATH, quiet=False)
@@ -44,14 +36,9 @@ def load_model_and_labels():
 
     return model, labels
 
-
-# 🔑 LOAD ONCE (CACHED)
 MODEL, LABELS = load_model_and_labels()
 
-
-# ---------------------------
-# FACE DETECTOR
-# ---------------------------
+# Face Detector
 @st.cache_resource
 def load_face_cascade():
     cascade = cv2.CascadeClassifier(
@@ -64,10 +51,7 @@ def load_face_cascade():
 
 FACE_CASCADE = load_face_cascade()
 
-
-# ---------------------------
-# PREDICTION
-# ---------------------------
+# Predicting
 def predict_rgb_face(face_rgb):
     face_resized = cv2.resize(face_rgb, (IMG_SIZE, IMG_SIZE))
     face_resized = np.expand_dims(face_resized, axis=0)
@@ -79,9 +63,7 @@ def predict_rgb_face(face_rgb):
     return LABELS[idx], float(probs[idx])
 
 
-# ---------------------------
-# FACE DETECTION + ANNOTATION
-# ---------------------------
+# Face Detection + Annotation
 def detect_face_and_predict(frame_bgr):
     gray = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2GRAY)
     faces = FACE_CASCADE.detectMultiScale(gray, scaleFactor=1.3, minNeighbors=5)
