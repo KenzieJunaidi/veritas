@@ -6,6 +6,7 @@ from PIL import Image
 import numpy as np
 import pytz
 
+# Page Config
 st.set_page_config(page_title="Veritas | Home", layout="wide")
 
 st.markdown("""
@@ -22,9 +23,19 @@ if not user:
     st.warning("You must be logged in.")
     st.stop()
 
-header_col, logout_col = st.columns([8, 1])
+# Header Section
+header_col, tutorial_col, logout_col = st.columns([7, 1.5, 1])
+
 with header_col:
     st.title("Veritas – Attendance System")
+
+with tutorial_col:
+    st.link_button(
+        "📘 Tutorial",
+        "https://github.com/KenzieJunaidi/veritas#readme",
+        use_container_width=True
+    )
+
 with logout_col:
     if st.button("Logout"):
         from utils.auth import logout
@@ -39,22 +50,20 @@ with col1:
 
 with col2:
     st.markdown("### 📊 System Status")
-    
-    # Time logic
+
     wib = pytz.timezone("Asia/Jakarta")
     now = datetime.now(wib)
-    
+
     st.metric("Current Time", now.strftime("%H:%M:%S"))
     st.metric("Class", "A0707")
     st.metric("Model Status", "🧠 Loaded & Active")
     st.metric("Database", "🟢 Connected")
 
-# Procesing Logic
+# Image Processing
 if image:
     img = Image.open(image).convert("RGB")
     frame = np.array(img)
 
-    # Process Detection
     name, _ = detect_face_and_predict(frame)
 
     if name:
@@ -75,16 +84,18 @@ if image:
 
 # Attendance Log
 st.markdown("---")
-st.markdown("### Attendance Log (Latest 20 Records")
+st.markdown("### Attendance Log (Latest 20 Records)")
 
 try:
     logs = supabase.table("attendance_log") \
-        .select("person_detected,timestamp") \
+        .select("person_detected, timestamp") \
         .order("timestamp", desc=True) \
-        .limit(10).execute().data
+        .limit(10) \
+        .execute() \
+        .data
 
-    # Displaying Logs
     for log in logs:
         st.write(f"**{log['timestamp']}** — {log['person_detected']}")
+
 except Exception as e:
     st.error("Could not load logs from database.")
