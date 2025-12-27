@@ -10,7 +10,7 @@ For demonstration and evaluation purposes, the following test account can be use
 
 > ⚠️ This account is provided **strictly for testing and academic evaluation**.
 
----
+#
 
 ### 📌 How to Use the Veritas Attendance System
 
