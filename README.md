@@ -1,7 +1,7 @@
 # 🔒 Veritas – Face Recognition Attendance System
 A web-based attendance system utilizing real-time face recognition.
 
-## 📑 Testing Account
+### 📑 Testing Account
 
 For demonstration and evaluation purposes, the following test account can be used to access the system:
 
@@ -10,13 +10,9 @@ For demonstration and evaluation purposes, the following test account can be use
 
 > ⚠️ This account is provided **strictly for testing and academic evaluation**.
 
+---
 
-
-## 📌 How to Use the Veritas Attendance System
-
-Veritas is a web-based attendance system that leverages real-time face recognition to automatically record attendance. Follow the steps below to ensure proper usage.
-
-### Step-by-Step Usage Guide
+### 📌 How to Use the Veritas Attendance System
 
 1. **Access the System**  
    Log in to the Veritas web application using a valid account.
