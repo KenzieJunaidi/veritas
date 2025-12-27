@@ -9,7 +9,7 @@ For demonstration and evaluation purposes, the following test account can be use
 
 > ⚠️ This account is provided **strictly for testing and academic evaluation**.
 
----
+
 
 ## 📌 How to Use the Veritas Attendance System
 
@@ -41,5 +41,5 @@ Veritas is a web-based attendance system that leverages real-time face recogniti
    - The detected name and timestamp are stored in the database
    - A confirmation message is displayed to the user
 
----
+
 
