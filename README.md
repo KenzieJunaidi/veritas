@@ -1,4 +1,5 @@
 # 🔐 Veritas – Face Recognition Attendance System
+A web-based attendance system utilizing real-time face recognition.
 
 ## 📑 Testing Account
 
